@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -62,6 +63,9 @@ func (p *uamoimProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 }
 
 func (p *uamoimProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	ctx = tflog.SetField(ctx, "provider", "uamoim")
+	ctx = tflog.SetField(ctx, "provider_version", p.version)
+
 	var cfg uamoimProviderConfig
 	diags := req.Config.Get(ctx, &cfg)
 	resp.Diagnostics.Append(diags...)
@@ -140,7 +144,7 @@ func (p *uamoimProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	// Create a new uamoim client using the configuration values
+	tflog.Debug(ctx, "Creating uamoim API client")
 	client, err := hashicups.NewClient(&host, &username, &password)
 	if err != nil {
 		resp.Diagnostics.AddError(
