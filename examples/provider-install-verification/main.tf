@@ -34,8 +34,8 @@ resource "uamoim_order" "example" {
     quantity = 2
   }, {
     coffee = {
-      id = 1
-      name = data.uamoim_coffees.all.by_id["1"]
+      id = 7
+      name = data.uamoim_coffees.all.by_id["7"]
     }
     quantity = 2
   }

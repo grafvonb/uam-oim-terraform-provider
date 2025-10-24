@@ -2,19 +2,23 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/hashicorp-demoapp/hashicups-client-go"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64default"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &orderResource{}
-	_ resource.ResourceWithConfigure = &orderResource{}
+	_ resource.Resource               = &orderResource{}
+	_ resource.ResourceWithConfigure  = &orderResource{}
+	_ resource.ResourceWithModifyPlan = &orderResource{}
 )
 
 // NewOrderResource is a helper function to simplify the provider implementation.
@@ -25,6 +29,65 @@ func NewOrderResource() resource.Resource {
 // orderResource is the resource implementation.
 type orderResource struct {
 	client *hashicups.Client
+}
+
+func (r *orderResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var plan orderResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() || len(plan.Items) == 0 {
+		return
+	}
+
+	coffees, err := r.client.GetCoffees()
+	if err != nil {
+		resp.Diagnostics.AddError("Error Reading HashiCups Coffees", err.Error())
+		return
+	}
+
+	// Build lookup: coffee ID -> price
+	priceByID := make(map[int64]float64, len(coffees))
+	for _, c := range coffees {
+		priceByID[int64(c.ID)] = c.Price
+	}
+
+	for i := range plan.Items {
+		// only set when price is missing/unknown
+		// if !(plan.Items[i].Coffee.Price.IsNull() || plan.Items[i].Coffee.Price.IsUnknown()) {
+		//continue
+		//}
+		// need a known ID to look up
+		if plan.Items[i].Coffee.ID.IsNull() || plan.Items[i].Coffee.ID.IsUnknown() {
+			continue // or add an error if ID must be provided
+		}
+
+		id := plan.Items[i].Coffee.ID.ValueInt64()
+		price, ok := priceByID[id]
+		if !ok {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("items").AtListIndex(i).AtName("coffee").AtName("id"),
+				"Unknown coffee ID",
+				fmt.Sprintf("ID %d not found in available coffees", id),
+			)
+			continue
+		}
+
+		p := path.Root("items").AtListIndex(i).AtName("coffee").AtName("price")
+		if err := resp.Plan.SetAttribute(ctx, p, types.Float64Value(price)); err != nil {
+			resp.Diagnostics.Append(err...)
+		}
+	}
+
+	// Do not call resp.Plan.Set, Rewriting the whole plan:
+	// - destroys unknown values coming from other resources
+	// - clobbers results of other plan modifiers
+	// - drops RequiresReplace intent and other planner metadata
+	// - can introduce wrong diffs
+	// diags = resp.Plan.Set(ctx, &plan)
+	// resp.Diagnostics.Append(diags...)
 }
 
 func (r *orderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -68,6 +131,7 @@ func (r *orderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									Required: true,
 								},
 								"name": schema.StringAttribute{
+									Optional: true,
 									Computed: true,
 								},
 								"teaser": schema.StringAttribute{
@@ -78,6 +142,8 @@ func (r *orderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 								"price": schema.Float64Attribute{
 									Computed: true,
+									Optional: true,
+									Default:  float64default.StaticFloat64(0.0),
 								},
 								"image": schema.StringAttribute{
 									Computed: true,

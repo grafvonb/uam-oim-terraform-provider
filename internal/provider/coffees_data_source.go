@@ -17,7 +17,9 @@ var (
 )
 
 type coffeesDataSourceModel struct {
-	Coffees []coffeesModel `tfsdk:"coffees"`
+	Coffees []coffeesModel          `tfsdk:"coffees"`
+	ByName  map[string]types.String `tfsdk:"by_name"`
+	ByID    map[string]types.String `tfsdk:"by_id"`
 }
 
 type coffeesModel struct {
@@ -98,6 +100,16 @@ func (d *coffeesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					},
 				},
 			},
+			"by_name": schema.MapAttribute{
+				Computed:    true,
+				ElementType: types.StringType,
+				Description: "A map of coffee names by their ID.",
+			},
+			"by_id": schema.MapAttribute{
+				Computed:    true,
+				ElementType: types.StringType,
+				Description: "A map of coffee IDs by their name.",
+			},
 		},
 	}
 }
@@ -128,6 +140,16 @@ func (d *coffeesDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		}
 		state.Coffees = append(state.Coffees, coffeeState)
 	}
+
+	byName := make(map[string]types.String, len(state.Coffees))
+	byID := make(map[string]types.String, len(state.Coffees))
+	for _, coffee := range coffees {
+		byID[fmt.Sprintf("%d", coffee.ID)] = types.StringValue(coffee.Name)
+		byName[coffee.Name] = types.StringValue(fmt.Sprintf("%d", coffee.ID))
+	}
+	state.ByName = byName
+	state.ByID = byID
+
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
