@@ -65,6 +65,7 @@ func (p *uamoimProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 func (p *uamoimProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	ctx = tflog.SetField(ctx, "provider", "uamoim")
 	ctx = tflog.SetField(ctx, "provider_version", p.version)
+	tflog.Info(ctx, "Configuring uamoim client")
 
 	var cfg uamoimProviderConfig
 	diags := req.Config.Get(ctx, &cfg)
@@ -169,5 +170,7 @@ func (p *uamoimProvider) DataSources(_ context.Context) []func() datasource.Data
 }
 
 func (p *uamoimProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		NewOrderResource,
+	}
 }

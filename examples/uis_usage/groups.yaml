@@ -1,0 +1,31 @@
+gitlab_groups:
+  # UGITLAB-3
+  - path: "pws-blueprint"
+    name: "PWS Blueprint"
+    description: "PWS Blueprint"
+    BISOS: ["XZ41234", "XZ4ABCD"]
+    # UGITLAB-28
+  - path: "pws-delivery-pipeline"
+    name: "PWS Delivery Pipeline"
+    description: "Enthält die Konfiguration der Applikationen zur Unterstützung des CI/CD Prozesses im Kontext der PWS Blueprint Pipeline"
+    BISOS: ["XZ41234", "XZ4ABCD"]
+    # UGITLAB-7
+  - path: "oska"
+    name: "OSKA"
+    description: ""
+    BISOS: ["XZ41234", "XZ4ABCD"]
+    # UGITLAB-2
+  - path: "imp"
+    name: "IIM Monitoringplattform"
+    description: ""
+    BISOS: ["XZ41234", "XZ4ABCD"]
+    # UGITLAB-40
+  - path: "iim-monit"
+    name: "IIM Monit"
+    description: ""
+    BISOS: ["XZ41234", "XZ4ABCD"]
+    # UGITLAB-37
+  - path: "carat"
+    name: "CARAT"
+    description: ""
+    BISOS: ["XZ41234", "XZ4ABCD"]
