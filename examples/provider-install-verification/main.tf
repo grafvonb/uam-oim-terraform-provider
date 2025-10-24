@@ -16,17 +16,26 @@ data "uamoim_shops" "example" {}
 
 data "uamoim_sods" "example" {}
 
-data "uamoim_coffees" "example" {}
+data "uamoim_coffees" "all" {}
+
+locals {
+    coffee_names_by_id = {
+        for coffee in data.uamoim_coffees.all.coffees :
+        coffee.id => coffee.name
+    }
+}
 
 resource "uamoim_order" "example" {
   items = [{
     coffee = {
       id = 3
+      name = local.coffee_names_by_id["3"]
     }
     quantity = 2
   }, {
     coffee = {
       id = 1
+      name = data.uamoim_coffees.all.by_id["1"]
     }
     quantity = 2
   }
@@ -38,5 +47,5 @@ output "example_order" {
 }
 
 output "example_coffees" {
-  value = data.uamoim_coffees.example
+  value = data.uamoim_coffees.all
 }
